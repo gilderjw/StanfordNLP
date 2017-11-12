@@ -1,4 +1,5 @@
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.*;
@@ -31,6 +32,10 @@ public class NLP {
         } else {
             return s.toLowerCase();
         }
+    }
+
+    public static String getStem(String s) {
+        return s;
     }
 
     public static Sentence processSentence(String text, StanfordCoreNLP coreNLP) {
@@ -124,7 +129,10 @@ public class NLP {
             // count the number of words in the predicates
             for (String s1: predicate) {
                 for (String s2: stmtPreds) {
+                    s1 = getStem(s1);
                     s1 = getSynonym(s1);
+
+                    s2 = getStem(s2);
                     s2 = getSynonym(s2);
 
                     if (s1.equalsIgnoreCase(s2)) {
@@ -135,7 +143,6 @@ public class NLP {
                 }
 
             }
-
         }
         return "no";
     }
@@ -165,48 +172,85 @@ public class NLP {
 
         HashMap<String, List<Sentence>> sentenceMap = new HashMap<>();
 
-        File f = new File("lincoln.txt2");
+        String document = "lincoln.txt2";
 
-        // split the file up into sentences
-        String fileContents = new String(Files.readAllBytes(f.toPath())).replaceAll("\n", "");
-        String sentences[] = fileContents.split("(?<=([a-z0-9][\\.\\?]))");
+        File f = new File(document);
+        File corpus = new File(document + ".corpus");
 
-        int failedProcess = 0;
-        // process the sentences
-        for (String s: sentences) {
-            Sentence sentence = processSentence(s, coreNLP);
 
-            if (sentence.object == null &&
-                    sentence.subject == null &&
-                    sentence.predicate == null) {
-                failedProcess++;
+        if (corpus.exists()) {
+            System.out.println("Detected saved database, loading...");
+            Scanner scan = new Scanner(corpus);
+            // restore the information in the database
+            List<String> lines = Files.readAllLines(corpus.toPath());
+
+            for (int i = 0; i < lines.size(); i += 3) {
+                Sentence tmp = new Sentence();
+
+                String line = scan.nextLine();
+                tmp.subject = line.substring(line.indexOf(' ')+1);
+
+                line = scan.nextLine();
+                tmp.predicate = line.substring(line.indexOf(' ')+1);
+
+                line = scan.nextLine();
+                tmp.object = line.substring(line.indexOf(' ')+1);
+
+                if (sentenceMap.containsKey(tmp.subject)) {
+                    sentenceMap.get(tmp.subject).add(tmp);
+                } else {
+                    ArrayList<Sentence> lst = new ArrayList<>();
+                    lst.add(tmp);
+                    sentenceMap.put(tmp.subject, lst);
+                }
+                System.out.println(tmp.subject);
+            }
+        } else {
+            FileWriter writer = new FileWriter(corpus);
+
+            // split the file up into sentences
+            String fileContents = new String(Files.readAllBytes(f.toPath())).replaceAll("\n", "");
+            String sentences[] = fileContents.split("(?<=([a-z0-9][\\.\\?]))");
+
+            int failedProcess = 0;
+            // process the sentences
+            for (String s : sentences) {
+                Sentence sentence = processSentence(s, coreNLP);
+
+                if (sentence.object == null &&
+                        sentence.subject == null &&
+                        sentence.predicate == null) {
+                    failedProcess++;
+                    continue;
+                }
+
+
+                if (sentenceMap.containsKey(sentence.subject)) {
+                    sentenceMap.get(sentence.subject).add(sentence);
+                } else {
+                    ArrayList<Sentence> newList = new ArrayList<>();
+                    newList.add(sentence);
+                    sentenceMap.put(sentence.subject, newList);
+                }
+
+                writer.write(sentence.toString());
             }
 
-            if (sentenceMap.containsKey(sentence.subject)) {
-                sentenceMap.get(sentence.subject).add(sentence);
-            } else {
-                ArrayList<Sentence> newList = new ArrayList<>();
-                newList.add(sentence);
-                sentenceMap.put(sentence.subject, newList);
-            }
+            int correctProcess = (sentences.length - failedProcess);
+            System.out.println("Successfully processed " +
+                    correctProcess +
+                    " sentences out of " +
+                    sentences.length +
+                    " (" + (((double) correctProcess * 100.0 / sentences.length)) + "%)");
+
+            writer.close();
         }
 
-//        // print out the results
-//        for (List<Sentence> entry : sentenceMap.values()) {
-//            for (Sentence s: entry) {
-//                System.out.println(s);
-//            }
-//        }
-        int correctProcess = (sentences.length-failedProcess);
-        System.out.println("Successfully processed " +
-                correctProcess +
-                " sentences out of " +
-                sentences.length +
-                " (" +  ( ((double) correctProcess * 100.0/sentences.length) ) + "%)" );
-
+        // process user input
         Scanner scan = new Scanner(System.in);
 
         for (;;) {
+            System.out.print("statement> ");
             String command = scan.nextLine();
             if (command.equals('q')) {
                 break;

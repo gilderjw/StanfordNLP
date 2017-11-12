@@ -200,3 +200,6 @@ gradle-app.setting
 # gradle/wrapper/gradle-wrapper.properties
 
 # End of https://www.gitignore.io/api/vim,java,maven,emacs,gradle,intellij
+
+# do not commit the corpus
+*.corpus

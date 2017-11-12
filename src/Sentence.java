@@ -9,4 +9,6 @@ public class Sentence {
                 "Predicate: " + this.predicate + "\n" +
                 "Object: " + this.object + "\n";
     }
+
+
 }
