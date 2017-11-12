@@ -21,6 +21,18 @@ import edu.stanford.nlp.util.Pair;
 
 
 public class NLP {
+
+    public static final HashMap<String, String> synonyms = new HashMap<>();
+    public static final HashSet<String> fillerWords = new HashSet<>();
+
+    public static String getSynonym(String s){
+        if (synonyms.containsKey(s.toLowerCase())) {
+            return synonyms.get(s.toLowerCase());
+        } else {
+            return s.toLowerCase();
+        }
+    }
+
     public static Sentence processSentence(String text, StanfordCoreNLP coreNLP) {
 
         Annotation document = new Annotation(text);
@@ -34,8 +46,8 @@ public class NLP {
         Sentence sent = new Sentence();
         for (CoreMap sentence : sentences) {
             LabeledScoredTreeNode tree = (LabeledScoredTreeNode) sentence.get(TreeAnnotation.class).getChild(0);
-            System.out.println();
-            System.out.println(tree);
+//            System.out.println();
+//            System.out.println(tree);
 
             String fileContents = "";
 
@@ -63,6 +75,7 @@ public class NLP {
                         }
                         sent.subject = tr.getLeaves().stream().map(
                                 (item) -> item.toString()).collect(Collectors.joining(" "));
+                        sent.subject = getSynonym(sent.subject);
                         break;
 
                     default:
@@ -74,21 +87,83 @@ public class NLP {
         return sent;
     }
 
+    public static String answerQuestion(StanfordCoreNLP nlp, Map<String, List<Sentence>> corpus, String question) {
+        Sentence qSentence = processSentence(question, nlp);
+        int score = 0;
+
+        // get predicate words
+        String predicate[] = qSentence.predicate.split("(?<=[a-zA-Z0-9][,;:]? )");
+        predicate = Arrays.stream(predicate)
+                .map(
+                        (String s) ->
+                                s.replaceAll("[,;:]? ", ""))
+                .filter(
+                        (String s) -> !fillerWords.contains(s.toLowerCase()))
+                .toArray(String[]::new);
+
+//        for (String s: predicate) {
+//            System.out.println(s);
+//        }
+
+        int neededScore = predicate.length/2;
+
+        List<Sentence> statements = corpus.get(getSynonym(qSentence.subject));
+
+        if (statements == null) {
+            return "I don't know";
+        }
+
+        // look through sentences with the same subject
+        for (Sentence stmt: statements) {
+            if (stmt.predicate == null) {
+                continue;
+            }
+
+            String stmtPreds[] = stmt.predicate.split("[,;:]* ");
+
+            // count the number of words in the predicates
+            for (String s1: predicate) {
+                for (String s2: stmtPreds) {
+                    s1 = getSynonym(s1);
+                    s2 = getSynonym(s2);
+
+                    if (s1.equalsIgnoreCase(s2)) {
+                        if (++score >= neededScore) {
+                            return "yes";
+                        }
+                    }
+                }
+
+            }
+
+        }
+        return "no";
+    }
+
     /**
      * @param args
      */
     public static void main(String[] args) throws IOException {
+        // set up some synonyms
+        synonyms.put("abraham lincoln", "lincoln");
+        synonyms.put("abraham", "lincoln");
+        synonyms.put("he", "lincoln");
+
+        // words that do not contribute to the meaning of the sentence
+        fillerWords.add("the");
+        fillerWords.add("is");
+        fillerWords.add("was");
+        fillerWords.add("a");
+        fillerWords.add("in");
+        fillerWords.add("are");
+        fillerWords.add("it's");
+
+
         Properties props = new Properties();
         props.put("annotators", "tokenize, ssplit, pos, lemma, ner, parse, dcoref");
         StanfordCoreNLP coreNLP = new StanfordCoreNLP(props);
 
         HashMap<String, List<Sentence>> sentenceMap = new HashMap<>();
-
-//        String text = "John picked up the red block";
-//        String text = "Pick up that block";
-//        String text = "In 1921, Einstein received the Nobel Prize for his original work on the photoelectric effect.";
-//        String text = "Did Einstein receive the Nobel Prize?";
-//        String text = "Mary saw a ring through the window and asked John for it.";
 
         File f = new File("lincoln.txt2");
 
@@ -116,18 +191,34 @@ public class NLP {
             }
         }
 
-        // print out the results
-        for (List<Sentence> entry : sentenceMap.values()) {
-            for (Sentence s: entry) {
-                System.out.println(s);
-            }
-        }
+//        // print out the results
+//        for (List<Sentence> entry : sentenceMap.values()) {
+//            for (Sentence s: entry) {
+//                System.out.println(s);
+//            }
+//        }
         int correctProcess = (sentences.length-failedProcess);
         System.out.println("Successfully processed " +
                 correctProcess +
                 " sentences out of " +
                 sentences.length +
                 " (" +  ( ((double) correctProcess * 100.0/sentences.length) ) + "%)" );
+
+        Scanner scan = new Scanner(System.in);
+
+        for (;;) {
+            String command = scan.nextLine();
+            if (command.equals('q')) {
+                break;
+            }
+
+            if (command == null) {
+                continue;
+            }
+
+            System.out.println(answerQuestion(coreNLP, sentenceMap, command));
+        }
+
 
     }
 
