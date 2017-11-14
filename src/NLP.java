@@ -37,15 +37,15 @@ public class NLP {
     public static String getStem(String s) {
       String suffixes[] = new String[] {"able", "ible", "al", "ial", "ed", "en", "er", "est", "ful", "ic", "ing", "ion",
               "tion", "ation", "ition", "ity", "ty", "ive", "ative","itive", "less", "ly", "ment", "ness", "ous",
-              "eous", "ious", "s", "es", "y"};
+              "eous", "ious", "es"};
       String prefixes[] = new String[] {"anti", "de", "dis", "en", "em", "fore", "in", "im", "il", "ir", "inter", "mid",
               "mis", "non", "over", "pre", "re", "semi", "sub", "super", "trans", "un", "under"};
 
       //suffixes
       for(int i = 0; i < suffixes.length; i++){
         if(s.length() > suffixes[i].length()){
-          if(s.endsWith(suffixes[i])){
-            s = s.substring((s.length()-suffixes[i].length()), s.length());
+          if(s.endsWith(suffixes[i])) {
+            s = s.substring(0, (s.length()-suffixes[i].length()));
             break;
           }
         }
@@ -54,11 +54,12 @@ public class NLP {
       for(int j = 0; j < prefixes.length; j++){
         if(s.length() > prefixes[j].length()){
           if(s.startsWith(prefixes[j])){
-            s = s.substring(0, (s.length()-prefixes[j].length()));
+            s = s.substring((s.length()-prefixes[j].length())+1);
               break;
           }
         }
       }
+
         return s;
     }
 
@@ -129,9 +130,6 @@ public class NLP {
                         (String s) -> !fillerWords.contains(s.toLowerCase()))
                 .toArray(String[]::new);
 
-//        for (String s: predicate) {
-//            System.out.println(s);
-//        }
 
         int neededScore = (int) Math.round(predicate.length*.75);
 
@@ -158,6 +156,8 @@ public class NLP {
 
                     s2 = getStem(s2);
                     s2 = getSynonym(s2);
+
+//                    System.out.println(s1 +" : " + s2);
 
                     if (s1.equalsIgnoreCase(s2)) {
                         if (++score >= neededScore) {
@@ -231,7 +231,7 @@ public class NLP {
                     lst.add(tmp);
                     sentenceMap.put(tmp.subject, lst);
                 }
-                System.out.println(tmp.subject);
+//                System.out.println(tmp.subject);
             }
         } else {
             FileWriter writer = new FileWriter(corpus);
@@ -280,7 +280,7 @@ public class NLP {
         for (;;) {
             System.out.print("statement> ");
             String command = scan.nextLine();
-            if (command.equals('q')) {
+            if (command.equals("exit")) {
                 break;
             }
 
