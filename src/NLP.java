@@ -35,6 +35,30 @@ public class NLP {
     }
 
     public static String getStem(String s) {
+      String suffixes[] = new String[] {"able", "ible", "al", "ial", "ed", "en", "er", "est", "ful", "ic", "ing", "ion",
+              "tion", "ation", "ition", "ity", "ty", "ive", "ative","itive", "less", "ly", "ment", "ness", "ous",
+              "eous", "ious", "s", "es", "y"};
+      String prefixes[] = new String[] {"anti", "de", "dis", "en", "em", "fore", "in", "im", "il", "ir", "inter", "mid",
+              "mis", "non", "over", "pre", "re", "semi", "sub", "super", "trans", "un", "under"};
+
+      //suffixes
+      for(int i = 0; i < suffixes.length; i++){
+        if(s.length() > suffixes[i].length()){
+          if(s.endsWith(suffixes[i])){
+            s = s.substring((s.length()-suffixes[i].length()), s.length());
+            break;
+          }
+        }
+      }
+      //prefixes
+      for(int j = 0; j < prefixes.length; j++){
+        if(s.length() > prefixes[j].length()){
+          if(s.startsWith(prefixes[j])){
+            s = s.substring(0, (s.length()-prefixes[j].length()));
+              break;
+          }
+        }
+      }
         return s;
     }
 
@@ -51,8 +75,7 @@ public class NLP {
         Sentence sent = new Sentence();
         for (CoreMap sentence : sentences) {
             LabeledScoredTreeNode tree = (LabeledScoredTreeNode) sentence.get(TreeAnnotation.class).getChild(0);
-//            System.out.println();
-//            System.out.println(tree);
+
 
             String fileContents = "";
 
@@ -110,7 +133,7 @@ public class NLP {
 //            System.out.println(s);
 //        }
 
-        int neededScore = predicate.length/2;
+        int neededScore = (int) Math.round(predicate.length*.75);
 
         List<Sentence> statements = corpus.get(getSynonym(qSentence.subject));
 
@@ -120,6 +143,7 @@ public class NLP {
 
         // look through sentences with the same subject
         for (Sentence stmt: statements) {
+          score = 0;
             if (stmt.predicate == null) {
                 continue;
             }
@@ -155,6 +179,7 @@ public class NLP {
         synonyms.put("abraham lincoln", "lincoln");
         synonyms.put("abraham", "lincoln");
         synonyms.put("he", "lincoln");
+        synonyms.put("assassinated", "killed");
 
         // words that do not contribute to the meaning of the sentence
         fillerWords.add("the");
@@ -164,6 +189,9 @@ public class NLP {
         fillerWords.add("in");
         fillerWords.add("are");
         fillerWords.add("it's");
+        fillerWords.add("an");
+        fillerWords.add("and");
+        fillerWords.add("for");
 
 
         Properties props = new Properties();
